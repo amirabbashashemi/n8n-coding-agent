@@ -22,7 +22,7 @@ public class InvoiceController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Invoice> getInvoiceById(@PathVariable(value = "id") Long invoiceId) {
-        return ResponseEntity.ok(invoiceService.getInvoiceById(invoiceId));
+        return ResponseEntity.ok(invoiceService.getInvoiceById(invoiceId).get());
     }
 
     @PostMapping

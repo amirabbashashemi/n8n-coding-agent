@@ -33,5 +33,12 @@ public class CustomerService {
         customerRepository.deleteById(id);
     }
 
-    // سایر متدهای منطق تجاری مرتبط با مشتری
+
+    public Customer update(Long id, Customer customer) {
+        Customer byId = customerRepository.findById(id).get();
+        byId.setName(customer.getName());
+        byId.setEmail(customer.getEmail());
+        save(byId);
+        return byId;
+    }
 }

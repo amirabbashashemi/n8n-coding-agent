@@ -1,6 +1,7 @@
 package com.example.goldshop.customer.controller;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.goldshop.customer.model.Customer;
@@ -33,9 +34,8 @@ public class CustomerController {
 
     @PutMapping("/{id}")
     public ResponseEntity<Customer> updateCustomer(@PathVariable Long id, @RequestBody Customer customer) {
-        return customerService.update(id, customer)
-            .map(ResponseEntity::ok)
-            .orElse(ResponseEntity.notFound().build());
+        customerService.update(id, customer);
+        return new ResponseEntity<>(HttpStatus.OK);
     }
 
     @DeleteMapping("/{id}")

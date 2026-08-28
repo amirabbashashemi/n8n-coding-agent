@@ -1,7 +1,7 @@
 package com.example.goldshop.product.service;
 
+import com.example.goldshop.product.model.Product;
 import com.example.goldshop.product.repository.ProductRepository;
-import com.example.goldshop.model.Product;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.List;

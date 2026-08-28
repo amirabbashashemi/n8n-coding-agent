@@ -1,11 +1,11 @@
 package com.example.goldshop.product.controller;
 
+import com.example.goldshop.product.model.Product;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.example.goldshop.product.service.ProductService;
-import com.example.goldshop.model.Product;
 import java.util.List;
 
 @RestController
@@ -23,7 +23,7 @@ public class ProductController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Product> getProductById(@PathVariable Long id) {
-        Product product = productService.getProductById(id);
+        Product product = productService.getProductById(id).get();
         return new ResponseEntity<>(product, HttpStatus.OK);
     }
 

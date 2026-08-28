@@ -28,7 +28,7 @@ public class InvoiceService {
     public Invoice updateInvoice(Long id, Invoice invoiceDetails) {
         Invoice invoice = invoiceRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Invoice not found"));
-        invoice.setAmount(invoiceDetails.getAmount());
+        invoice.setTotalAmount(invoiceDetails.getTotalAmount());
         invoice.setDate(invoiceDetails.getDate());
         return invoiceRepository.save(invoice);
     }
