@@ -1,10 +1,8 @@
-package com.example.goldshop.repository;
+package com.example.goldshop.product.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.stereotype.Repository;
 import com.example.goldshop.model.Product;
 
-@Repository
 public interface ProductRepository extends JpaRepository<Product, Long> {
-    // افزودن روش‌های اختصاصی در صورت نیاز در اینجا
+    // اینجا می‌توانید متدهایی برای عملیات خاص محصول اضافه کنید
 }
