@@ -8,8 +8,8 @@
     <packaging>jar</packaging>
 
     <properties>
-        <java.version>25</java.version>
-        <spring-boot.version>4.1.1</spring-boot.version>
+        <java.version>21</java.version>
+        <spring-boot.version>3.4.0</spring-boot.version> <!-- یا نسخه سازگار با جاوا ۲۱ -->
     </properties>
 
     <dependencies>
