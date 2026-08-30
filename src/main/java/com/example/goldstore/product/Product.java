@@ -2,9 +2,6 @@ package com.example.goldstore.product;
 
 import java.math.BigDecimal;
 
-/**
- * Product data exchanged by the product API.
- */
 public class Product {
     private Long id;
     private String name;
@@ -12,7 +9,6 @@ public class Product {
     private BigDecimal price;
 
     public Product() {
-        // Required by Jackson for JSON deserialization.
     }
 
     public Product(Long id, String name, BigDecimal weight, BigDecimal price) {
