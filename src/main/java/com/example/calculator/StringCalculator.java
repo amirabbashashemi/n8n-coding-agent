@@ -13,7 +13,7 @@ public class StringCalculator {
         int sum = 0;
         List<Integer> negatives = new ArrayList<>();
         for (String token : tokens) {
-            int number = Integer.parseInt(token);
+            int number = Integer.parseInt(token.trim());
             if (number < 0) {
                 negatives.add(number);
             }
