@@ -1,28 +1,15 @@
-package com.example.calculator;
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
 
-public class StringCalculator {
+    <groupId>com.example</groupId>
+    <artifactId>calculator</artifactId>
+    <version>1.0-SNAPSHOT</version>
 
-    public int add(String numbers) {
-        // If the input string is empty, return 0
-        if (numbers.isEmpty()) {
-            return 0;
-        }
-
-        // Split the input by comma or new line
-        String[] tokens = numbers.split("[,
-]");
-        int sum = 0;
-
-        for (String token : tokens) {
-            // Try to parse each token as an integer
-            try {
-                sum += Integer.parseInt(token.trim());
-            } catch (NumberFormatException e) {
-                // Handle invalid inputs by throwing an exception
-                throw new IllegalArgumentException("Invalid input: " + token);
-            }
-        }
-
-        return sum;
-    }
-}
+    <properties>
+        <maven.compiler.source>21</maven.compiler.source>
+        <maven.compiler.target>21</maven.compiler.target>
+        <maven.compiler.release>21</maven.compiler.release>
+    </properties>
+</project>
