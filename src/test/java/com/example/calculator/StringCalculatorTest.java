@@ -1,15 +1,43 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
-    <modelVersion>4.0.0</modelVersion>
+package com.example.calculator;
 
-    <groupId>com.example</groupId>
-    <artifactId>calculator</artifactId>
-    <version>1.0-SNAPSHOT</version>
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.*;
 
-    <properties>
-        <maven.compiler.source>21</maven.compiler.source>
-        <maven.compiler.target>21</maven.compiler.target>
-        <maven.compiler.release>21</maven.compiler.release>
-    </properties>
-</project>
+class StringCalculatorTest {
+
+    @Test
+    void testAddEmptyString() {
+        StringCalculator calculator = new StringCalculator();
+        assertEquals(0, calculator.add(""));
+    }
+
+    @Test
+    void testAddSingleNumber() {
+        StringCalculator calculator = new StringCalculator();
+        assertEquals(5, calculator.add("5"));
+    }
+
+    @Test
+    void testAddMultipleNumbers() {
+        StringCalculator calculator = new StringCalculator();
+        assertEquals(6, calculator.add("1,2,3"));
+    }
+
+    @Test
+    void testAddNegativeNumbers() {
+        StringCalculator calculator = new StringCalculator();
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            calculator.add("1,-2,3");
+        });
+        assertEquals("Invalid input: -2", exception.getMessage());
+    }
+
+    @Test
+    void testAddInvalidInput() {
+        StringCalculator calculator = new StringCalculator();
+        Exception exception = assertThrows(IllegalArgumentException.class, () -> {
+            calculator.add("1,2,a");
+        });
+        assertEquals("Invalid input: a", exception.getMessage());
+    }
+}
