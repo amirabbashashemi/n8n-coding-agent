@@ -1,7 +1,11 @@
-# n8n Coding Agent
+# Project
 
-This repository contains the n8n coding agent implementation.
+This repository contains the project source code and its associated build configuration.
 
-## Development
+## Build
 
-Clone the repository from GitHub and follow the project-specific build instructions provided by the source tree.
+Use Maven to build the project:
+
+```bash
+mvn verify
+```
