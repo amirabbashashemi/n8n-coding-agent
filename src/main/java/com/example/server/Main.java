@@ -1,65 +1,69 @@
 package com.example.server;
 
-import com.example.server.http.HealthHandler;
-import com.example.server.http.JsonHttpResponder;
-import com.example.server.http.MessageHandler;
-import com.example.server.repository.InMemoryMessageRepository;
-import com.example.server.repository.MessageRepository;
-import com.example.server.service.MessageService;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
 import java.io.IOException;
+import java.io.OutputStream;
 import java.net.InetSocketAddress;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
+import java.nio.charset.StandardCharsets;
 
 /**
- * Application entry point and HTTP server bootstrap.
+ * Application entry point for the HTTP service.
  */
 public final class Main {
-
-    private static final String BIND_ADDRESS = "0.0.0.0";
-    private static final int PORT = 9000;
+    private static final int DEFAULT_PORT = 8080;
 
     private Main() {
+        // Utility class.
     }
 
     public static void main(String[] args) throws IOException {
-        ObjectMapper objectMapper = new ObjectMapper();
-        MessageRepository messageRepository = new InMemoryMessageRepository();
-        MessageService messageService = new MessageService(messageRepository);
-        JsonHttpResponder responder = new JsonHttpResponder(objectMapper);
-        MessageHandler messageHandler = new MessageHandler(messageService, objectMapper, responder);
-        HealthHandler healthHandler = new HealthHandler(responder);
+        int port = configuredPort();
+        HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
+        server.createContext("/health", Main::health);
+        server.createContext("/", Main::notFound);
+        server.setExecutor(null);
+        Runtime.getRuntime().addShutdownHook(new Thread(server::stop, "http-server-shutdown"));
+        server.start();
+    }
 
-        HttpServer server = HttpServer.create(
-                new InetSocketAddress(BIND_ADDRESS, PORT),
-                0
-        );
-        ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-        AtomicBoolean stopped = new AtomicBoolean(false);
-
-        server.createContext("/api/messages", messageHandler);
-        server.createContext("/api/health", healthHandler);
-        server.setExecutor(executor);
-
-        Thread shutdownHook = new Thread(() -> stop(server, executor, stopped), "http-server-shutdown");
-        Runtime.getRuntime().addShutdownHook(shutdownHook);
-
+    private static int configuredPort() {
+        String value = System.getProperty("server.port", System.getenv("PORT"));
+        if (value == null || value.isBlank()) {
+            return DEFAULT_PORT;
+        }
         try {
-            server.start();
-        } catch (RuntimeException | Error startupFailure) {
-            stop(server, executor, stopped);
-            throw startupFailure;
+            int port = Integer.parseInt(value);
+            if (port < 1 || port > 65535) {
+                throw new IllegalArgumentException("server.port must be between 1 and 65535");
+            }
+            return port;
+        } catch (NumberFormatException exception) {
+            throw new IllegalArgumentException("server.port must be a valid integer", exception);
         }
     }
 
-    private static void stop(HttpServer server, ExecutorService executor, AtomicBoolean stopped) {
-        if (stopped.compareAndSet(false, true)) {
-            server.stop(0);
-            executor.close();
+    private static void health(HttpExchange exchange) throws IOException {
+        if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.getResponseHeaders().set("Allow", "GET");
+            respond(exchange, 405, "{\"error\":\"method_not_allowed\"}");
+            return;
+        }
+        respond(exchange, 200, "{\"status\":\"ok\"}");
+    }
+
+    private static void notFound(HttpExchange exchange) throws IOException {
+        respond(exchange, 404, "{\"error\":\"not_found\"}");
+    }
+
+    private static void respond(HttpExchange exchange, int status, String body) throws IOException {
+        byte[] bytes = body.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
+        exchange.getResponseHeaders().set("Content-Length", Integer.toString(bytes.length));
+        exchange.sendResponseHeaders(status, bytes.length);
+        try (OutputStream output = exchange.getResponseBody()) {
+            output.write(bytes);
         }
     }
 }
