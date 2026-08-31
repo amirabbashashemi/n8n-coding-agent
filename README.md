@@ -1,11 +1,3 @@
-# Project
+# n8n Coding Agent
 
-This repository contains the project source code and its associated build configuration.
-
-## Build
-
-Use Maven to build the project:
-
-```bash
-mvn verify
-```
+This repository contains the n8n coding agent project.
