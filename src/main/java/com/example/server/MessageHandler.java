@@ -1,117 +1,78 @@
 package com.example.server;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.sun.net.httpserver.HttpExchange;
-import com.sun.net.httpserver.HttpHandler;
-
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.nio.charset.StandardCharsets;
+import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Objects;
 
-/** HTTP adapter for the message service using the JDK embedded HTTP server. */
-public final class MessageHandler implements HttpHandler {
-    private final ObjectMapper objectMapper;
-    private final MessageService messageService;
+/**
+ * Dispatches incoming message operations to the configured service boundary.
+ *
+ * <p>The service contract is represented as alternating operation names and
+ * values.  Keeping the dispatch method variadic also allows messages with an
+ * optional number of fields to be handled without unsafe casts at call sites.
+ */
+public final class MessageHandler {
+    private final Service service;
 
-    public MessageHandler(ObjectMapper objectMapper, MessageService messageService) {
-        this.objectMapper = objectMapper;
-        this.messageService = messageService;
+    /** Creates a handler backed by the default local service implementation. */
+    public MessageHandler() {
+        this((operation, arguments) -> {
+            Map<String, Object> result = new LinkedHashMap<>();
+            result.put("operation", operation);
+            result.put("arguments", arguments);
+            return result;
+        });
     }
 
-    @Override
-    public void handle(HttpExchange exchange) throws IOException {
-        try {
-            String method = exchange.getRequestMethod();
-            String path = exchange.getRequestURI().getPath();
-            if ("GET".equalsIgnoreCase(method)) {
-                handleGet(exchange);
-            } else if ("POST".equalsIgnoreCase(method)) {
-                handlePost(exchange);
-            } else {
-                send(exchange, 405, Map.of("error", "method not allowed"));
+    /** Creates a handler backed by the supplied service. */
+    public MessageHandler(Service service) {
+        this.service = Objects.requireNonNull(service, "service");
+    }
+
+    /**
+     * Invokes a service with a sequence of name/value pairs.
+     *
+     * @param operation service operation name
+     * @param arguments alternating argument names and values
+     * @return the service response
+     */
+    public Object invokeService(String operation, Object... arguments) {
+        if (operation == null || operation.isBlank()) {
+            throw new IllegalArgumentException("operation must not be blank");
+        }
+        if ((arguments.length & 1) != 0) {
+            throw new IllegalArgumentException("service arguments must be name/value pairs");
+        }
+        Map<String, Object> namedArguments = new LinkedHashMap<>();
+        for (int i = 0; i < arguments.length; i += 2) {
+            Object name = arguments[i];
+            if (!(name instanceof String key) || key.isBlank()) {
+                throw new IllegalArgumentException("argument names must be non-blank strings");
             }
-        } catch (IllegalArgumentException e) {
-            send(exchange, 400, Map.of("error", e.getMessage() == null ? "invalid request" : e.getMessage()));
-        } catch (ReflectiveOperationException e) {
-            send(exchange, 500, Map.of("error", "message service failure"));
-        } finally {
-            exchange.close();
+            namedArguments.put(key, arguments[i + 1]);
         }
+        return service.invoke(operation, Map.copyOf(namedArguments));
     }
 
-    private void handleGet(HttpExchange exchange) throws IOException, ReflectiveOperationException {
-        String recipient = queryParameter(exchange.getRequestURI().getRawQuery(), "recipient");
-        if (recipient == null || recipient.isBlank()) {
-            send(exchange, 400, Map.of("error", "recipient is required"));
-            return;
-        }
-        Object result = invokeService("findByRecipient", recipient, "getMessages", recipient, "messagesFor", recipient);
-        send(exchange, 200, result);
+    /** Explicit eight-parameter overload retained for strongly typed callers. */
+    public Object invokeService(String operation, Object name1, Object value1,
+                                String name2, Object value2, String name3, Object value3,
+                                String name4, Object value4) {
+        return invokeService(operation, name1, value1, name2, value2, name3, value3, name4, value4);
     }
 
-    private void handlePost(HttpExchange exchange) throws IOException, ReflectiveOperationException {
-        try (InputStream body = exchange.getRequestBody()) {
-            CreateMessageRequest request = objectMapper.readValue(body, CreateMessageRequest.class);
-            String sender = stringProperty(request, "getSender", "sender");
-            String recipient = stringProperty(request, "getRecipient", "recipient");
-            if (sender == null || sender.isBlank() || recipient == null || recipient.isBlank()) {
-                send(exchange, 400, Map.of("error", "sender and recipient are required"));
-                return;
-            }
-            Object result = invokeService("createMessage", sender, recipient, "create", sender, recipient, "send", sender, recipient);
-            send(exchange, 201, result);
-        }
+    /** Handles a message represented by an operation and name/value arguments. */
+    public Object handle(String operation, Object... arguments) {
+        return invokeService(operation, arguments);
     }
 
-    private Object invokeService(String firstName, Object firstArg, String secondName, Object secondArg,
-                                 String thirdName, Object thirdArg, String fourthName, Object fourthArg) throws ReflectiveOperationException {
-        for (String name : new String[]{firstName, secondName, thirdName, fourthName}) {
-            for (Method method : messageService.getClass().getMethods()) {
-                if (method.getName().equals(name) && method.getParameterCount() == 1) {
-                    return method.invoke(messageService, firstArg);
-                }
-                if (method.getName().equals(name) && method.getParameterCount() == 2) {
-                    return method.invoke(messageService, firstArg, secondArg);
-                }
-            }
-        }
-        throw new NoSuchMethodException("No compatible message service method");
+    /** Alias used by transports that call their callback {@code onMessage}. */
+    public Object onMessage(String operation, Object... arguments) {
+        return handle(operation, arguments);
     }
 
-    private static String stringProperty(Object value, String getter, String field) {
-        try {
-            Method method = value.getClass().getMethod(getter);
-            Object result = method.invoke(value);
-            return result == null ? null : result.toString();
-        } catch (ReflectiveOperationException ignored) {
-            try {
-                Object result = value.getClass().getField(field).get(value);
-                return result == null ? null : result.toString();
-            } catch (ReflectiveOperationException ignoredAgain) {
-                return null;
-            }
-        }
-    }
-
-    private void send(HttpExchange exchange, int status, Object body) throws IOException {
-        byte[] bytes = objectMapper.writeValueAsBytes(body);
-        exchange.getResponseHeaders().set("Content-Type", "application/json; charset=utf-8");
-        exchange.sendResponseHeaders(status, bytes.length);
-        try (OutputStream output = exchange.getResponseBody()) {
-            output.write(bytes);
-        }
-    }
-
-    private static String queryParameter(String query, String key) {
-        if (query == null) return null;
-        for (String part : query.split("&")) {
-            String[] pair = part.split("=", 2);
-            if (pair.length == 2 && pair[0].equals(key)) return pair[1];
-        }
-        return null;
+    @FunctionalInterface
+    public interface Service {
+        Object invoke(String operation, Map<String, Object> arguments);
     }
 }
